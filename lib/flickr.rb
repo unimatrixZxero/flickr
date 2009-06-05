@@ -7,7 +7,12 @@
 #
 # BASIC USAGE:
 #  require 'flickr'
-#  flickr = Flickr.new('some_flickr_api_key')    # create a flickr client (get an API key from http://www.flickr.com/services/api/)
+#
+#  # create a flickr client (get an API key from http://www.flickr.com/services/api/)
+#  flickr = Flickr.new({:api_key => 'api_key', 
+#                       :shared_secret => 'shared_secret'
+#                       :auth_token => 'auth_token'})    
+#
 #  user = flickr.users('sco@scottraymond.net')   # lookup a user
 #  user.name                                     # get the user's name
 #  user.location                                 # and location
