@@ -375,7 +375,7 @@ class Flickr
       @name
     end
 
-    #private
+    private
 
       # Implements flickr.people.getInfo, flickr.urls.getUserPhotos, and flickr.urls.getUserProfile
       def getInfo
@@ -690,23 +690,40 @@ class Flickr
       @client = Flickr.new @api_key
     end
 
-    # Implements flickr.photosets.getInfo
-    # private, once we can call it as needed
-    def getInfo
-      info = @client.photosets_getInfo('photoset_id'=>@id)['photoset']
-      @owner = User.new(info['owner'], nil, nil, nil, @api_key)
-      @primary = info['primary']
-      @photos = info['photos']
-      @title = info['title']
-      @description = info['description']
-      @url = "http://www.flickr.com/photos/#{@owner.getInfo.username}/sets/#{@id}/"
-      self
+    def owner
+      @owner || getInfo.owner
     end
-    
+
+    def primary
+      @primary || getInfo.primary
+    end
+
+    def title
+      @title || getInfo.title
+    end
+
+		def url
+      @url || getInfo.url
+    end
+
     def getPhotos
       photosetPhotos = @client.photos_request('photosets.getPhotos', {'photoset_id' => @id})
     end
 
+    private
+      def getInfo
+        unless @info
+          @info = @client.photosets_getInfo('photoset_id'=>@id)['photoset']
+          @owner = User.new(@info['owner'], nil, nil, nil, @api_key)
+          @primary = @info['primary']
+          @photos = @info['photos']
+          @title = @info['title']
+          @description = @info['description']
+					debugger
+          @url = "#{@owner.photos_url}sets/#{@id}/"
+        end
+        self
+      end
   end
   
 end

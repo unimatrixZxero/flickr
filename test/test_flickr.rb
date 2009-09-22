@@ -868,7 +868,26 @@ class TestFlickr < Test::Unit::TestCase
     assert_kind_of Flickr::Photo, photos.first
   end
 
-   
+  def test_should_get_info_just_once
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    photoset_id, photos_url = 'foo123', 'http://example.com/photos/killer_bob/'
+    response = {
+      'primary' => 'primary',
+      'title' => 'title',
+      'description' => 'description',
+      'url' => "#{photos_url}sets/#{photoset_id}/" }
+    Flickr::User.expects(:new).returns(stub(:photos_url => photos_url))
+    photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
+    client.expects(:photosets_getInfo).with(anything).returns({'photoset' => response })
+    assert_equal response['title'], photoset.title
+    assert_equal response['url'], photoset.url
+    assert_equal response['primary'], photoset.primary
+    assert_equal response['description'], photoset.description
+  end
+  
+
+
   #  def test_photosets_editMeta
   #    assert_equal @f.photosets_editMeta('photoset_id'=>@photoset_id, 'title'=>@title)['stat'], 'ok'
   #  end
@@ -967,6 +986,14 @@ class TestFlickr < Test::Unit::TestCase
                        'foo' => 'bar', 
                        'auth_token' => 'foobar789'}.merge(options))
     
+  end
+  def new_photo(options={})
+    Flickr::Photo.new("1418878", 
+                      "foo123",
+                      { "farm" => "1",
+                        "server" => "2",
+                        "secret" => "1e92283336",
+                        "owner" => Flickr::User.new("abc123", "some_user", nil, nil, "some_api_key") }.merge(options))
   end
   def new_photo(options={})
     Flickr::Photo.new("1418878", 
