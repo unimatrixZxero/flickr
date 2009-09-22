@@ -371,9 +371,13 @@ class TestFlickr < Test::Unit::TestCase
     assert_equal "http://www.flickr.com/people/foo123/", new_user.url
   end
   
-  def test_should_build_url_for_users_photos_page_using_user_id
-    Flickr.any_instance.expects(:http_get).never
-    assert_equal "http://www.flickr.com/photos/foo123/", new_user.photos_url
+  def test_should_build_url_for_users_photos_page_using_photosurl
+    f = flickr_client
+    f.expects(:people_getInfo).with(anything).returns({'person' => {
+      'photosurl' => 'http://www.flickr.com/photos/killer_bob/',
+      'photos' => {'count' => 0}
+    }})
+    assert_equal "http://www.flickr.com/photos/killer_bob/", new_user('client' => f).photos_url
   end
   
   def test_should_get_pretty_url_for_users_profile_page

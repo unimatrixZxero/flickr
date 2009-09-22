@@ -303,10 +303,8 @@ class Flickr
       @firstdatetaken.nil? ? getInfo.firstdatetaken : @firstdatetaken
     end
     
-    # Builds url for user's photos page as per 
-    # http://www.flickr.com/services/api/misc.urls.html
     def photos_url
-      "http://www.flickr.com/photos/#{id}/"
+      @photos_url || getInfo.photos_url
     end
         
     # Builds url for user's profile page as per 
@@ -377,17 +375,20 @@ class Flickr
       @name
     end
 
-    private
+    #private
 
       # Implements flickr.people.getInfo, flickr.urls.getUserPhotos, and flickr.urls.getUserProfile
       def getInfo
-        info = @client.people_getInfo('user_id'=>@id)['person']
-        @username = info['username']
-        @name = info['realname']
-        @location = info['location']
-        @count = info['photos']['count']
-        @firstdate = info['photos']['firstdate']
-        @firstdatetaken = info['photos']['firstdatetaken']
+        unless @info
+          @info = @client.people_getInfo('user_id'=>@id)['person']
+          @username = @info['username']
+          @name = @info['realname']
+          @location = @info['location']
+          @photos_url = @info['photosurl']
+          @count = @info['photos']['count']
+          @firstdate = @info['photos']['firstdate']
+          @firstdatetaken = @info['photos']['firstdatetaken']
+        end
         self
       end
 
