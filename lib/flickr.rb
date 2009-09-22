@@ -719,7 +719,6 @@ class Flickr
           @photos = @info['photos']
           @title = @info['title']
           @description = @info['description']
-					debugger
           @url = "#{@owner.photos_url}sets/#{@id}/"
         end
         self
