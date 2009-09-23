@@ -706,9 +706,9 @@ class Flickr
       @url || getInfo.url
     end
 
-    def getPhotos
-      photosetPhotos = @client.photos_request('photosets.getPhotos', {'photoset_id' => @id})
-    end
+		def photos
+			@photos ||= getPhotos
+	  end
 
     private
       def getInfo
@@ -716,12 +716,15 @@ class Flickr
           @info = @client.photosets_getInfo('photoset_id'=>@id)['photoset']
           @owner = User.new(@info['owner'], nil, nil, nil, @api_key)
           @primary = @info['primary']
-          @photos = @info['photos']
           @title = @info['title']
           @description = @info['description']
           @url = "#{@owner.photos_url}sets/#{@id}/"
         end
         self
+      end
+
+      def getPhotos
+        @client.photos_request('photosets.getPhotos', {'photoset_id' => @id})
       end
   end
   

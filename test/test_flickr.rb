@@ -863,7 +863,7 @@ class TestFlickr < Test::Unit::TestCase
     Flickr.any_instance.expects(:request).with('photosets.getPhotos', {'photoset_id' => 'some_id'}).returns(dummy_photoset_photos_response)
     photoset = Flickr::Photoset.new("some_id", "some_api_key")
     
-    assert_kind_of Flickr::PhotoCollection, photos = photoset.getPhotos
+    assert_kind_of Flickr::PhotoCollection, photos = photoset.photos
     assert_equal 2, photos.size
     assert_kind_of Flickr::Photo, photos.first
   end
@@ -872,6 +872,7 @@ class TestFlickr < Test::Unit::TestCase
     client = mock('client')
     Flickr.expects(:new).with("some_api_key").returns(client)
     client.expects(:photosets_getInfo).never
+    client.expects(:photos_request).never
 		Flickr::Photoset.new('foo123', "some_api_key")
 	end
 
@@ -887,12 +888,24 @@ class TestFlickr < Test::Unit::TestCase
     Flickr::User.expects(:new).returns(stub(:photos_url => photos_url))
     photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
     client.expects(:photosets_getInfo).with(anything).returns({'photoset' => response })
+    client.expects(:photos_request).never
     assert_equal response['title'], photoset.title
     assert_equal response['url'], photoset.url
     assert_equal response['primary'], photoset.primary
     assert_equal response['description'], photoset.description
   end
   
+  def test_photoset_should_get_photos_just_once
+    photoset_id = 'foo123'
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
+    client.expects(:photosets_getInfo).never
+    client.expects(:photos_request).with('photosets.getPhotos', 
+      {'photoset_id' => photoset_id}).returns([])
+    assert_equal [], photoset.photos
+    photoset.photos # photos_request should not be called again
+  end
 
 
   #  def test_photosets_editMeta
