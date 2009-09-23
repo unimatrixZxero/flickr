@@ -868,7 +868,14 @@ class TestFlickr < Test::Unit::TestCase
     assert_kind_of Flickr::Photo, photos.first
   end
 
-  def test_should_get_info_just_once
+  def test_photoset_should_get_info_on_demand
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    client.expects(:photosets_getInfo).never
+		Flickr::Photoset.new('foo123', "some_api_key")
+	end
+
+  def test_photoset_should_get_info_just_once
     client = mock('client')
     Flickr.expects(:new).with("some_api_key").returns(client)
     photoset_id, photos_url = 'foo123', 'http://example.com/photos/killer_bob/'
