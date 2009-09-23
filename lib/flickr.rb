@@ -710,6 +710,10 @@ class Flickr
 			@photos ||= getPhotos
 	  end
 
+		def first_photo
+			@first_photo ||= getFirstPhoto
+	  end
+
     private
       def getInfo
         unless @info
@@ -725,6 +729,10 @@ class Flickr
 
       def getPhotos
         @client.photos_request('photosets.getPhotos', {'photoset_id' => @id})
+      end
+
+      def getFirstPhoto
+        @client.photos_request('photosets.getPhotos', {'photoset_id' => @id, :per_page => 1}).first
       end
   end
   

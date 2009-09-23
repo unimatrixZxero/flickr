@@ -907,6 +907,21 @@ class TestFlickr < Test::Unit::TestCase
     photoset.photos # photos_request should not be called again
   end
 
+  def test_photoset_should_get_first_photos_just_once
+		photo = new_photo
+    photoset_id = 'foo123'
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
+    client.expects(:photosets_getInfo).never
+    client.expects(:photos_request).with('photosets.getPhotos', 
+      {'photoset_id' => photoset_id}).never
+    client.expects(:photos_request).with('photosets.getPhotos', 
+      {'photoset_id' => photoset_id, :per_page => 1}).returns([photo])
+    assert_equal photo, photoset.first_photo
+    photoset.first_photo # photos_request should not be called again
+  end
+
 
   #  def test_photosets_editMeta
   #    assert_equal @f.photosets_editMeta('photoset_id'=>@photoset_id, 'title'=>@title)['stat'], 'ok'
@@ -1006,14 +1021,6 @@ class TestFlickr < Test::Unit::TestCase
                        'foo' => 'bar', 
                        'auth_token' => 'foobar789'}.merge(options))
     
-  end
-  def new_photo(options={})
-    Flickr::Photo.new("1418878", 
-                      "foo123",
-                      { "farm" => "1",
-                        "server" => "2",
-                        "secret" => "1e92283336",
-                        "owner" => Flickr::User.new("abc123", "some_user", nil, nil, "some_api_key") }.merge(options))
   end
   def new_photo(options={})
     Flickr::Photo.new("1418878", 
