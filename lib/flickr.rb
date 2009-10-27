@@ -35,7 +35,7 @@
 
 require 'cgi'
 require 'net/http'
-require 'xmlsimple'
+require 'xmlsimple' unless defined? XmlSimple
 require 'digest/md5'
 
 # Flickr client class. Requires an API key
@@ -43,7 +43,8 @@ class Flickr
   attr_reader :api_key, :auth_token
   attr_accessor :user
   
-  HOST_URL = 'http://api.flickr.com'
+  HOST = 'api.flickr.com'
+  HOST_URL = 'http://' + HOST
   API_PATH = '/services/rest'
 
   # Flickr, annoyingly, uses a number of representations to specify the size 
