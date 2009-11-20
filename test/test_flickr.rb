@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'flickr'
+require File.expand_path(File.dirname(__FILE__) + '/../lib/flickr')
 require 'test/unit'
 require 'mocha'
 
@@ -786,6 +786,14 @@ class TestFlickr < Test::Unit::TestCase
     Flickr::Photo.expects(:new).with("0", anything, anything).never
     
     photo.context
+  end
+
+  def test_should_tell_if_it_is_vertical_based_on_the_height_and_width
+    v, h = Flickr::Photo.new, Flickr::Photo.new
+    v.expects(:sizes).with('Medium').returns({"height"=>"480", "width"=>"360"})
+    h.expects(:sizes).with('Medium').returns({"height"=>"360", "width"=>"480"})
+    assert v.vertical?
+    assert !h.vertical?
   end
   
   # ##### Flickr::Group tests

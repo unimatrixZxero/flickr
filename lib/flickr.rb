@@ -534,6 +534,11 @@ class Flickr
       return sizes
     end
 
+    def vertical?
+      @medium_size ||= self.sizes('Medium')
+      @medium_size['height'] > @medium_size['width']
+    end
+
     # flickr.tags.getListPhoto
     def tags
       @client.tags_getListPhoto('photo_id'=>@id)['photo']['tags']
