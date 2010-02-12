@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'flickr'
+require File.expand_path(File.dirname(__FILE__) + '/../lib/flickr')
 require 'test/unit'
 require 'mocha'
 
@@ -371,9 +371,13 @@ class TestFlickr < Test::Unit::TestCase
     assert_equal "http://www.flickr.com/people/foo123/", new_user.url
   end
   
-  def test_should_build_url_for_users_photos_page_using_user_id
-    Flickr.any_instance.expects(:http_get).never
-    assert_equal "http://www.flickr.com/photos/foo123/", new_user.photos_url
+  def test_should_build_url_for_users_photos_page_using_photosurl
+    f = flickr_client
+    f.expects(:people_getInfo).with(anything).returns({'person' => {
+      'photosurl' => 'http://www.flickr.com/photos/killer_bob/',
+      'photos' => {'count' => 0}
+    }})
+    assert_equal "http://www.flickr.com/photos/killer_bob/", new_user('client' => f).photos_url
   end
   
   def test_should_get_pretty_url_for_users_profile_page
@@ -783,6 +787,14 @@ class TestFlickr < Test::Unit::TestCase
     
     photo.context
   end
+
+  def test_should_tell_if_it_is_vertical_based_on_the_height_and_width
+    v, h = Flickr::Photo.new, Flickr::Photo.new
+    v.expects(:sizes).with('Medium').returns({"height"=>"480", "width"=>"360"})
+    h.expects(:sizes).with('Medium').returns({"height"=>"360", "width"=>"480"})
+    assert v.vertical?
+    assert !h.vertical?
+  end
   
   # ##### Flickr::Group tests
   # 
@@ -859,12 +871,66 @@ class TestFlickr < Test::Unit::TestCase
     Flickr.any_instance.expects(:request).with('photosets.getPhotos', {'photoset_id' => 'some_id'}).returns(dummy_photoset_photos_response)
     photoset = Flickr::Photoset.new("some_id", "some_api_key")
     
-    assert_kind_of Flickr::PhotoCollection, photos = photoset.getPhotos
+    assert_kind_of Flickr::PhotoCollection, photos = photoset.photos
     assert_equal 2, photos.size
     assert_kind_of Flickr::Photo, photos.first
   end
 
-   
+  def test_photoset_should_get_info_on_demand
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    client.expects(:photosets_getInfo).never
+    client.expects(:photos_request).never
+		Flickr::Photoset.new('foo123', "some_api_key")
+	end
+
+  def test_photoset_should_get_info_just_once
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    photoset_id, photos_url = 'foo123', 'http://example.com/photos/killer_bob/'
+    response = {
+      'primary' => 'primary',
+      'title' => 'title',
+      'description' => 'description',
+      'url' => "#{photos_url}sets/#{photoset_id}/" }
+    Flickr::User.expects(:new).returns(stub(:photos_url => photos_url))
+    photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
+    client.expects(:photosets_getInfo).with(anything).returns({'photoset' => response })
+    client.expects(:photos_request).never
+    assert_equal response['title'], photoset.title
+    assert_equal response['url'], photoset.url
+    assert_equal response['primary'], photoset.primary
+    assert_equal response['description'], photoset.description
+  end
+  
+  def test_photoset_should_get_photos_just_once
+    photoset_id = 'foo123'
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
+    client.expects(:photosets_getInfo).never
+    client.expects(:photos_request).with('photosets.getPhotos', 
+      {'photoset_id' => photoset_id}).returns([])
+    assert_equal [], photoset.photos
+    photoset.photos # photos_request should not be called again
+  end
+
+  def test_photoset_should_get_first_photos_just_once
+		photo = new_photo
+    photoset_id = 'foo123'
+    client = mock('client')
+    Flickr.expects(:new).with("some_api_key").returns(client)
+    photoset = Flickr::Photoset.new(photoset_id, "some_api_key")
+    client.expects(:photosets_getInfo).never
+    client.expects(:photos_request).with('photosets.getPhotos', 
+      {'photoset_id' => photoset_id}).never
+    client.expects(:photos_request).with('photosets.getPhotos', 
+      {'photoset_id' => photoset_id, :per_page => 1}).returns([photo])
+    assert_equal photo, photoset.first_photo
+    photoset.first_photo # photos_request should not be called again
+  end
+
+
   #  def test_photosets_editMeta
   #    assert_equal @f.photosets_editMeta('photoset_id'=>@photoset_id, 'title'=>@title)['stat'], 'ok'
   #  end

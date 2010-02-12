@@ -40,7 +40,7 @@
 
 require 'cgi'
 require 'net/http'
-require 'xmlsimple'
+require 'xmlsimple' unless defined? XmlSimple
 require 'digest/md5'
 
 # Flickr client class. Requires an API key
@@ -48,7 +48,8 @@ class Flickr
   attr_reader :api_key, :auth_token
   attr_accessor :user
   
-  HOST_URL = 'http://flickr.com'
+  HOST = 'api.flickr.com'
+  HOST_URL = 'http://' + HOST
   API_PATH = '/services/rest'
 
   # Flickr, annoyingly, uses a number of representations to specify the size 
@@ -308,10 +309,8 @@ class Flickr
       @firstdatetaken.nil? ? getInfo.firstdatetaken : @firstdatetaken
     end
     
-    # Builds url for user's photos page as per 
-    # http://www.flickr.com/services/api/misc.urls.html
     def photos_url
-      "http://www.flickr.com/photos/#{id}/"
+      @photos_url || getInfo.photos_url
     end
         
     # Builds url for user's profile page as per 
@@ -386,13 +385,16 @@ class Flickr
 
       # Implements flickr.people.getInfo, flickr.urls.getUserPhotos, and flickr.urls.getUserProfile
       def getInfo
-        info = @client.people_getInfo('user_id'=>@id)['person']
-        @username = info['username']
-        @name = info['realname']
-        @location = info['location']
-        @count = info['photos']['count']
-        @firstdate = info['photos']['firstdate']
-        @firstdatetaken = info['photos']['firstdatetaken']
+        unless @info
+          @info = @client.people_getInfo('user_id'=>@id)['person']
+          @username = @info['username']
+          @name = @info['realname']
+          @location = @info['location']
+          @photos_url = @info['photosurl']
+          @count = @info['photos']['count']
+          @firstdate = @info['photos']['firstdate']
+          @firstdatetaken = @info['photos']['firstdatetaken']
+        end
         self
       end
 
@@ -535,6 +537,11 @@ class Flickr
       sizes = @client.photos_getSizes('photo_id'=>@id)['sizes']['size']
       sizes = sizes.find{|asize| asize['label']==size} if size
       return sizes
+    end
+
+    def vertical?
+      @medium_size ||= self.sizes('Medium')
+      @medium_size['height'] > @medium_size['width']
     end
 
     # flickr.tags.getListPhoto
@@ -694,23 +701,50 @@ class Flickr
       @client = Flickr.new @api_key
     end
 
-    # Implements flickr.photosets.getInfo
-    # private, once we can call it as needed
-    def getInfo
-      info = @client.photosets_getInfo('photoset_id'=>@id)['photoset']
-      @owner = User.new(info['owner'], nil, nil, nil, @api_key)
-      @primary = info['primary']
-      @photos = info['photos']
-      @title = info['title']
-      @description = info['description']
-      @url = "http://www.flickr.com/photos/#{@owner.getInfo.username}/sets/#{@id}/"
-      self
-    end
-    
-    def getPhotos
-      photosetPhotos = @client.photos_request('photosets.getPhotos', {'photoset_id' => @id})
+    def owner
+      @owner || getInfo.owner
     end
 
+    def primary
+      @primary || getInfo.primary
+    end
+
+    def title
+      @title || getInfo.title
+    end
+
+		def url
+      @url || getInfo.url
+    end
+
+		def photos
+			@photos ||= getPhotos
+	  end
+
+		def first_photo
+			@first_photo ||= getFirstPhoto
+	  end
+
+    private
+      def getInfo
+        unless @info
+          @info = @client.photosets_getInfo('photoset_id'=>@id)['photoset']
+          @owner = User.new(@info['owner'], nil, nil, nil, @api_key)
+          @primary = @info['primary']
+          @title = @info['title']
+          @description = @info['description']
+          @url = "#{@owner.photos_url}sets/#{@id}/"
+        end
+        self
+      end
+
+      def getPhotos
+        @client.photos_request('photosets.getPhotos', {'photoset_id' => @id})
+      end
+
+      def getFirstPhoto
+        @client.photos_request('photosets.getPhotos', {'photoset_id' => @id, :per_page => 1}).first
+      end
   end
   
 end
